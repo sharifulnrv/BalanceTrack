@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <h2 class="text-2xl font-bold text-slate-800">Budgets & Planning</h2>
+            <a href="{{ url_for('main.index') }}" class="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors flex items-center gap-1">
+                <i class="ph ph-house"></i> Back to Home
+            </a>
+        </div>
+        <a href="{{ url_for('budgets.add') }}" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2">
+            <i class="ph ph-plus"></i> Set Budget
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {% for budget in budgets %}
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+                <h4 class="font-bold text-slate-800">{{ budget.category.name }}</h4>
+                <span class="text-sm font-medium text-slate-500 uppercase tracking-wider">{{ budget.period }}</span>
+            </div>
+            <div class="flex items-end justify-between mb-2">
+                <span class="text-2xl font-bold text-slate-900">${{ "{:,.2f}".format(budget.amount) }}</span>
+                <span class="text-sm text-slate-500">Target</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-2.5">
+                <div class="bg-indigo-600 h-2.5 rounded-full" style="width: 45%"></div> {# Calculation needed in helper #}
+            </div>
+            <p class="mt-2 text-xs text-slate-400">45% of budget spent</p>
+            <div class="mt-4 flex justify-end gap-2">
+                <a href="{{ url_for('budgets.edit', id=budget.id) }}" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">Edit</a>
+                <form action="{{ url_for('budgets.delete', id=budget.id) }}" method="post" onsubmit="return confirm('Are you sure you want to delete this budget?');">
+                    <button type="submit" class="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-span-full py-12 text-center bg-white rounded-2xl border border-dashed border-slate-300">
+            <p class="text-slate-500">No budgets defined. Plan your spending for better health!</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

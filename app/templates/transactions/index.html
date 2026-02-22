@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <h2 class="text-2xl font-bold text-slate-800">Transaction History</h2>
+            <a href="{{ url_for('main.index') }}" class="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors flex items-center gap-1">
+                <i class="ph ph-house"></i> Back to Home
+            </a>
+        </div>
+        <a href="{{ url_for('transactions.add') }}" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2">
+            <i class="ph ph-plus"></i> New Transaction
+        </a>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-slate-50 border-b border-slate-200">
+                    <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Date</th>
+                    <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Description</th>
+                    <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Category</th>
+                    <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Account</th>
+                    <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase text-right">Amount</th>
+                    <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for tx in transactions %}
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-6 py-4 text-sm text-slate-600">{{ tx.date.strftime('%Y-%m-%d') }}</td>
+                    <td class="px-6 py-4">
+                        <p class="font-medium text-slate-800">{{ tx.description or 'No description' }}</p>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-medium">{{ tx.category.name if tx.category else 'Uncategorized' }}</span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-600">{{ tx.account.name }}</td>
+                    <td class="px-6 py-4 text-right font-bold {% if tx.transaction_type == 'Expense' %}text-red-500{% else %}text-green-600{% endif %}">
+                        {{ '-' if tx.transaction_type == 'Expense' else '+' }}{{ tx.account.currency.symbol if tx.account.currency else '$' }}{{ "{:,.2f}".format(tx.amount) }}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex justify-end gap-2">
+                            <a href="{{ url_for('transactions.edit', id=tx.id) }}" class="text-slate-400 hover:text-indigo-600 transition-colors">
+                                <i class="ph ph-pencil-simple text-lg"></i>
+                            </a>
+                            <form action="{{ url_for('transactions.delete', id=tx.id) }}" method="POST" onsubmit="return confirm('Delete this transaction?');" class="inline">
+                                <button type="submit" class="text-slate-400 hover:text-red-600 transition-colors">
+                                    <i class="ph ph-trash text-lg"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center text-slate-500">No transactions yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

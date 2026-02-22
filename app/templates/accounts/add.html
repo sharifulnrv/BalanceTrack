@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold text-slate-800">Add New Account</h2>
+            <a href="{{ url_for('main.index') }}" class="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors flex items-center gap-1">
+                <i class="ph ph-house"></i> Back to Home
+            </a>
+        </div>
+        <form method="POST">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Account Name</label>
+                    <input type="text" name="name" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Account Type</label>
+                    <select name="account_type" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option>Bank</option>
+                        <option>Cash</option>
+                        <option>Credit Card</option>
+                        <option>Investment</option>
+                        <option>Crypto Wallet</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Initial Balance</label>
+                    <input type="number" step="0.01" name="balance" value="0.00" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Theme Color</label>
+                    <input type="color" name="color" value="#4f46e5" class="w-full h-10 p-1 bg-slate-50 border border-slate-200 rounded-lg outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Currency</label>
+                    <select name="currency_id" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                        {% for currency in currencies %}
+                        <option value="{{ currency.id }}" {% if currency.code == 'BDT' %}selected{% endif %}>{{ currency.code }} ({{ currency.symbol }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="flex gap-4">
+                <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors">Save Account</button>
+                <a href="{{ url_for('accounts.index') }}" class="px-6 py-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors text-center">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

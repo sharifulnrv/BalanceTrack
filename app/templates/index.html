@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Header Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <p class="text-sm font-medium text-slate-500 mb-1">Total Net Worth</p>
+            <h3 class="text-2xl font-bold text-slate-900">{{ base_currency.symbol if base_currency else '$' }}{{ "{:,.2f}".format(net_worth) }}</h3>
+            <p class="text-xs text-green-600 mt-2 flex items-center gap-1">
+                <i class="ph ph-trend-up"></i> +2.5% from last month
+            </p>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <p class="text-sm font-medium text-slate-500 mb-1">Monthly Income</p>
+            <h3 class="text-2xl font-bold text-indigo-600">{{ base_currency.symbol if base_currency else '$' }}{{ "{:,.2f}".format(monthly_income) }}</h3>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <p class="text-sm font-medium text-slate-500 mb-1">Monthly Expenses</p>
+            <h3 class="text-2xl font-bold text-red-500">{{ base_currency.symbol if base_currency else '$' }}{{ "{:,.2f}".format(monthly_expense) }}</h3>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <p class="text-sm font-medium text-slate-500 mb-1">Savings Rate</p>
+            <h3 class="text-2xl font-bold text-slate-900">{{ "{:.1f}".format(savings_rate) }}%</h3>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm min-h-[350px]">
+            <div class="flex items-center justify-between mb-6">
+                <h4 class="font-bold text-slate-800">Income vs Expenses</h4>
+                <select class="text-sm bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 outline-none">
+                    <option>Last 6 Months</option>
+                    <option>Last Year</option>
+                </select>
+            </div>
+            <div id="revenueChart"></div>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm min-h-[350px]">
+            <h4 class="font-bold text-slate-800 mb-6">Expenses by Category</h4>
+            <div id="categoryChart"></div>
+        </div>
+    </div>
+
+    <!-- Bottom Section: Accounts & Recent Transactions -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Accounts Slider (Representative) -->
+        <div class="lg:col-span-1 space-y-4">
+            <div class="flex items-center justify-between">
+                <h4 class="font-bold text-slate-800">My Accounts</h4>
+                <a href="{{ url_for('accounts.add') }}" class="text-indigo-600 text-sm font-medium hover:underline">Add New</a>
+            </div>
+            <div class="space-y-3">
+                {% for acc in accounts %}
+                <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-600">
+                            <i class="ph {{ acc.icon or 'ph-wallet-fill' }}"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm">{{ acc.name }}</p>
+                            <p class="text-xs text-slate-500">{{ acc.account_type }}</p>
+                        </div>
+                    </div>
+                    <p class="font-bold">{{ acc.currency.symbol if acc.currency else '$' }}{{ "{:,.2f}".format(acc.balance) }}</p>
+                </div>
+                {% else %}
+                <p class="text-sm text-slate-500 text-center py-4">No accounts added yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between mb-6">
+                <h4 class="font-bold text-slate-800">Recent Transactions</h4>
+                <a href="{{ url_for('transactions.index') }}" class="text-indigo-600 text-sm font-medium hover:underline">View All</a>
+            </div>
+            <div class="space-y-4">
+                {% for tx in transactions %}
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 {% if tx.transaction_type == 'Expense' %}bg-red-50 text-red-500{% else %}bg-green-50 text-green-600{% endif %} rounded-full flex items-center justify-center">
+                            <i class="ph {{ tx.category.icon or 'ph-shopping-cart' }} text-lg"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm">{{ tx.description or tx.category.name or 'Transaction' }}</p>
+                            <p class="text-xs text-slate-500">{{ tx.date.strftime('%b %d, %H:%M') }}</p>
+                        </div>
+                    </div>
+                    <p class="font-bold {% if tx.transaction_type == 'Expense' %}text-red-500{% else %}text-green-600{% endif %}">
+                        {{ '-' if tx.transaction_type == 'Expense' else '+' }}{{ tx.account.currency.symbol if tx.account.currency else '$' }}{{ "{:,.2f}".format(tx.amount) }}
+                    </p>
+                </div>
+                {% else %}
+                <p class="text-sm text-slate-500 text-center py-4">No recent transactions.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+    // Income vs Expenses Chart
+    var options = {
+        series: [{
+            name: 'Income',
+            data: {{ income_data | safe }}
+        }, {
+            name: 'Expenses',
+            data: {{ expense_data | safe }}
+        }],
+        chart: {
+            type: 'area',
+            height: 280,
+            toolbar: { show: false },
+            zoom: { enabled: false }
+        },
+        colors: ['#4f46e5', '#f43f5e'],
+        dataLabels: { enabled: false },
+        stroke: { curve: 'smooth', width: 2 },
+        fill: {
+            type: 'gradient',
+            gradient: {
+                shadeIntensity: 1,
+                opacityFrom: 0.3,
+                opacityTo: 0.1,
+                stops: [0, 90, 100]
+            }
+        },
+        xaxis: {
+            categories: {{ chart_months | safe }},
+            axisBorder: { show: false },
+            axisTicks: { show: false }
+        },
+        yaxis: { show: false },
+        grid: {
+            borderColor: '#f1f5f9',
+            strokeDashArray: 4,
+            xaxis: { lines: { show: true } },
+            yaxis: { lines: { show: false } }
+        },
+        legend: { position: 'top', horizontalAlign: 'right' }
+    };
+    var chart = new ApexCharts(document.querySelector("#revenueChart"), options);
+    chart.render();
+
+    // Category Chart
+    var donutOptions = {
+        series: {{ category_values | safe }},
+        labels: {{ category_labels | safe }},
+        chart: { type: 'donut', height: 280 },
+        colors: ['#4f46e5', '#06b6d4', '#f59e0b', '#10b981'],
+        legend: { position: 'bottom' },
+        dataLabels: { enabled: false },
+        plotOptions: {
+            pie: {
+                donut: {
+                    size: '75%',
+                    labels: {
+                        show: true,
+                        total: {
+                            show: true,
+                            label: 'Total',
+                            fontSize: '14px',
+                            fontWeight: 600
+                        }
+                    }
+                }
+            }
+        }
+    };
+    var donutChart = new ApexCharts(document.querySelector("#categoryChart"), donutOptions);
+    donutChart.render();
+</script>
+{% endblock %}

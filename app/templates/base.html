@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BalanceTrack - Personal Finance Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="w-64 bg-white border-r border-slate-200 flex-shrink-0 hidden md:flex flex-col fixed inset-y-0 left-0 z-50 md:relative transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
+            <div class="p-6">
+                <a href="{{ url_for('main.index') }}" class="flex items-center gap-2">
+                    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="BalanceTrack Logo" class="w-8 h-8 rounded-lg outline outline-2 outline-indigo-100 p-1">
+                    <h1 class="text-xl font-bold text-indigo-600">BalanceTrack</h1>
+                </a>
+            </div>
+            <nav class="flex-1 px-4 space-y-1">
+                <a href="{{ url_for('main.index') }}" class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                    <i class="ph ph-house"></i> Dashboard
+                </a>
+                <a href="{{ url_for('transactions.index') }}" class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                    <i class="ph ph-arrows-left-right"></i> Transactions
+                </a>
+                <a href="{{ url_for('accounts.index') }}" class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                    <i class="ph ph-bank"></i> Accounts
+                </a>
+                <a href="{{ url_for('budgets.index') }}" class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                    <i class="ph ph-chart-pie"></i> Budgets
+                </a>
+                <a href="{{ url_for('loans.index') }}" class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                    <i class="ph ph-hand-coins"></i> Loans
+                </a>
+                <a href="{{ url_for('investments.index') }}" class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                    <i class="ph ph-chart-line-up"></i> Investments
+                </a>
+                <a href="{{ url_for('categories.index') }}" class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                    <i class="ph ph-tag"></i> Categories
+                </a>
+            </nav>
+            <div class="p-4 border-t border-slate-200">
+                {% if current_user.is_authenticated %}
+                <div class="flex items-center gap-3 px-3 py-2 mb-2">
+                    <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
+                        {{ current_user.username[0].upper() }}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium truncate">{{ current_user.username }}</p>
+                    </div>
+                </div>
+                <a href="{{ url_for('auth.logout') }}" class="flex items-center gap-3 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    <i class="ph ph-sign-out"></i> Logout
+                </a>
+                {% endif %}
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <!-- Top Header -->
+            <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0">
+                <button onclick="toggleSidebar()" class="md:hidden text-slate-500">
+                    <i class="ph ph-list text-2xl"></i>
+                </button>
+                <div class="flex items-center gap-4">
+                    <button class="w-10 h-10 flex items-center justify-center text-slate-500 hover:bg-slate-50 rounded-lg transition-all">
+                        <i class="ph ph-bell text-xl"></i>
+                    </button>
+                    <button class="w-10 h-10 flex items-center justify-center text-slate-500 hover:bg-slate-50 rounded-lg transition-all">
+                        <i class="ph ph-magnifying-glass text-xl"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <div class="flex-1 overflow-y-auto p-6">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="mb-4 p-4 rounded-lg flex items-center gap-3 {% if category == 'success' %}bg-green-100 text-green-700{% elif category == 'danger' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                                <i class="ph {% if category == 'success' %}ph-check-circle{% elif category == 'danger' %}ph-warning-circle{% else %}ph-info{% endif %} text-xl"></i>
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <!-- Quick Add Modal -->
+    <div id="quickAddModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
+            <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+                <h3 class="text-xl font-bold text-slate-800">Quick Add Transaction</h3>
+                <button onclick="toggleModal()" class="text-slate-400 hover:text-slate-600">
+                    <i class="ph ph-x text-2xl"></i>
+                </button>
+            </div>
+            <form action="{{ url_for('transactions.add') }}" method="POST" class="p-6 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Amount</label>
+                        <input type="number" step="0.01" name="amount" required class="w-full text-2xl font-bold px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Account</label>
+                        <select name="account_id" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none">
+                            {% if current_user.is_authenticated %}
+                                {% for acc in current_user.accounts %}
+                                <option value="{{ acc.id }}">{{ acc.name }}</option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Type</label>
+                        <select name="type" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none">
+                            <option value="Expense">Expense</option>
+                            <option value="Income">Income</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-shadow shadow-lg shadow-indigo-100">
+                    Record Now
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button onclick="toggleModal()" class="fixed bottom-8 right-8 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-xl shadow-indigo-200 flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-40">
+        <i class="ph ph-plus text-2xl"></i>
+    </button>
+
+    <script>
+        function toggleModal() {
+            const modal = document.getElementById('quickAddModal');
+            modal.classList.toggle('hidden');
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('hidden');
+            sidebar.classList.toggle('flex');
+            sidebar.classList.toggle('-translate-x-full');
+        }
+    </script>
+</body>
+</html>

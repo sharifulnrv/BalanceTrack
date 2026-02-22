@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold text-slate-800">Track New Investment</h2>
+            <a href="{{ url_for('main.index') }}" class="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors flex items-center gap-1">
+                <i class="ph ph-house"></i> Back to Home
+            </a>
+        </div>
+        <form method="POST">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Asset Name</label>
+                    <input type="text" name="name" placeholder="e.g. Bitcoin, Apple Stock" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Asset Type</label>
+                    <select name="type" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option>Stock</option>
+                        <option>Crypto</option>
+                        <option>Fixed Deposit</option>
+                        <option>Real Estate</option>
+                        <option>Gold</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Principal Amount</label>
+                    <input type="number" step="0.01" name="principal" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+            </div>
+            <div class="flex gap-4">
+                <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors">Track Asset</button>
+                <a href="{{ url_for('investments.index') }}" class="px-6 py-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors text-center">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
