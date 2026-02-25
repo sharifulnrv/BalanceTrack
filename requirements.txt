@@ -11,3 +11,6 @@ pandas
 openpyxl
 jinja2
 markupsafe
+pywebview
+pyinstaller
+Pillow

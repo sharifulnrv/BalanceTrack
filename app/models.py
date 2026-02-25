@@ -1,43 +1,17 @@
 from datetime import datetime, UTC
-from hashlib import sha256
-from app import db, login_manager
-from flask_login import UserMixin
-import bcrypt
-import uuid
+from app import db
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-
-class User(db.Model, UserMixin):
+class Profile(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(64), unique=True, nullable=False)
-    telegram_chat_id = db.Column(db.String(64), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128))
-    is_verified = db.Column(db.Boolean, default=False)
-    base_currency_id = db.Column(db.Integer, db.ForeignKey('currency.id'))
-    base_currency = db.relationship('Currency', foreign_keys=[base_currency_id])
+    name = db.Column(db.String(64), unique=True, nullable=False)
+    is_active = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
-    accounts = db.relationship('Account', backref='owner', lazy='dynamic')
-    categories = db.relationship('Category', backref='owner', lazy='dynamic')
-    loans = db.relationship('Loan', backref='user', lazy='dynamic')
-    investments = db.relationship('Investment', backref='user', lazy='dynamic')
-
-    def set_password(self, password):
-        self.password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
-    def check_password(self, password):
-        return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
-
-class OTPLog(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    otp_hash = db.Column(db.String(128), nullable=False)
-    expires_at = db.Column(db.DateTime, nullable=False)
-    retry_count = db.Column(db.Integer, default=0)
-    is_used = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
+    accounts = db.relationship('Account', backref='profile', lazy='dynamic')
+    categories = db.relationship('Category', backref='profile', lazy='dynamic')
+    loans = db.relationship('Loan', backref='profile', lazy='dynamic')
+    investments = db.relationship('Investment', backref='profile', lazy='dynamic')
+    budgets = db.relationship('Budget', backref='profile', lazy='dynamic')
 
 class Currency(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -48,7 +22,7 @@ class Currency(db.Model):
 
 class Account(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    profile_id = db.Column(db.Integer, db.ForeignKey('profile.id'), nullable=False)
     name = db.Column(db.String(64), nullable=False)
     account_type = db.Column(db.String(32)) # Bank, Cash, Credit Card, etc.
     currency_id = db.Column(db.Integer, db.ForeignKey('currency.id'))
@@ -76,7 +50,7 @@ class Account(db.Model):
 
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    profile_id = db.Column(db.Integer, db.ForeignKey('profile.id')) # Optional, some can be global
     name = db.Column(db.String(64), nullable=False)
     parent_id = db.Column(db.Integer, db.ForeignKey('category.id')) # For subcategories
     icon = db.Column(db.String(64))
@@ -100,7 +74,7 @@ class Transaction(db.Model):
 
 class Budget(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    profile_id = db.Column(db.Integer, db.ForeignKey('profile.id'), nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     period = db.Column(db.String(20)) # Monthly, Yearly
@@ -109,7 +83,7 @@ class Budget(db.Model):
 
 class Loan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    profile_id = db.Column(db.Integer, db.ForeignKey('profile.id'), nullable=False)
     lender_borrower_name = db.Column(db.String(128), nullable=False)
     loan_type = db.Column(db.String(20)) # Given, Taken
     total_amount = db.Column(db.Float, nullable=False)
@@ -120,7 +94,7 @@ class Loan(db.Model):
 
 class Investment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    profile_id = db.Column(db.Integer, db.ForeignKey('profile.id'), nullable=False)
     name = db.Column(db.String(128), nullable=False)
     asset_type = db.Column(db.String(32)) # Stock, Crypto, FD, etc.
     principal_amount = db.Column(db.Float, nullable=False)
@@ -129,7 +103,6 @@ class Investment(db.Model):
 
 class ActivityLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     action = db.Column(db.String(256))
     ip_address = db.Column(db.String(45))
     timestamp = db.Column(db.DateTime, default=lambda: datetime.now(UTC))

@@ -1,27 +1,31 @@
 from flask import Blueprint, render_template, send_file, Response
-from flask_login import login_required, current_user
 from app import db
 from app.models import Account, Transaction, Category, Loan, Investment, Currency
 from app.main.utils import export_transactions_to_excel, export_transactions_to_csv
 from sqlalchemy import func
 from datetime import datetime
-from seed_data import seed_currencies
+from seed_data import seed_currencies, seed_categories
 
 main = Blueprint('main', __name__)
 
 @main.route('/')
-@login_required
 def index():
-    # Ensure default currencies exist
+    # Ensure default data exists
     seed_currencies()
+    seed_categories()
     
+    from app.models import Profile
+    current_profile = Profile.query.filter_by(is_active=True).first()
+    if not current_profile:
+        return redirect(url_for('profiles.index'))
+
     # Calculate Net Worth
-    total_balance = db.session.query(func.sum(Account.balance)).filter(Account.user_id == current_user.id).scalar() or 0
-    investment_value = db.session.query(func.sum(Investment.current_value)).filter(Investment.user_id == current_user.id).scalar() or 0
+    total_balance = db.session.query(func.sum(Account.balance)).filter(Account.profile_id == current_profile.id).scalar() or 0
+    investment_value = db.session.query(func.sum(Investment.current_value)).filter(Investment.profile_id == current_profile.id).scalar() or 0
     total_net_worth = total_balance + investment_value
 
-    # Recent Transactions
-    recent_transactions = Transaction.query.join(Account, Transaction.account_id == Account.id).filter(Account.user_id == current_user.id).order_by(Transaction.date.desc()).limit(5).all()
+    # Recent Transactions (Filter by accounts belonging to this profile)
+    recent_transactions = Transaction.query.join(Account, Transaction.account_id == Account.id).filter(Account.profile_id == current_profile.id).order_by(Transaction.date.desc()).limit(5).all()
     
     # Calculate Monthly Metrics
     now = datetime.now()
@@ -30,14 +34,14 @@ def index():
     
     monthly_income = db.session.query(func.sum(Transaction.amount))\
         .join(Account, Transaction.account_id == Account.id)\
-        .filter(Account.user_id == current_user.id)\
+        .filter(Account.profile_id == current_profile.id)\
         .filter(Transaction.transaction_type == 'Income')\
         .filter(func.extract('month', Transaction.date) == month)\
         .filter(func.extract('year', Transaction.date) == year).scalar() or 0
         
     monthly_expense = db.session.query(func.sum(Transaction.amount))\
         .join(Account, Transaction.account_id == Account.id)\
-        .filter(Account.user_id == current_user.id)\
+        .filter(Account.profile_id == current_profile.id)\
         .filter(Transaction.transaction_type == 'Expense')\
         .filter(func.extract('month', Transaction.date) == month)\
         .filter(func.extract('year', Transaction.date) == year).scalar() or 0
@@ -47,7 +51,7 @@ def index():
         savings_rate = ((monthly_income - monthly_expense) / monthly_income) * 100
     
     # Accounts
-    user_accounts = Account.query.filter_by(user_id=current_user.id).all()
+    user_accounts = Account.query.filter_by(profile_id=current_profile.id).all()
 
     # Calculate Chart Data (Last 6 Months)
     from datetime import timedelta
@@ -63,7 +67,7 @@ def index():
         
         inc = db.session.query(func.sum(Transaction.amount))\
             .join(Account, Transaction.account_id == Account.id)\
-            .filter(Account.user_id == current_user.id)\
+            .filter(Account.profile_id == current_profile.id)\
             .filter(Transaction.transaction_type == 'Income')\
             .filter(func.extract('month', Transaction.date) == m)\
             .filter(func.extract('year', Transaction.date) == y).scalar() or 0
@@ -71,7 +75,7 @@ def index():
         
         exp = db.session.query(func.sum(Transaction.amount))\
             .join(Account, Transaction.account_id == Account.id)\
-            .filter(Account.user_id == current_user.id)\
+            .filter(Account.profile_id == current_profile.id)\
             .filter(Transaction.transaction_type == 'Expense')\
             .filter(func.extract('month', Transaction.date) == m)\
             .filter(func.extract('year', Transaction.date) == y).scalar() or 0
@@ -81,7 +85,7 @@ def index():
     category_data = db.session.query(Category.name, func.sum(Transaction.amount))\
         .join(Transaction, Transaction.category_id == Category.id)\
         .join(Account, Transaction.account_id == Account.id)\
-        .filter(Account.user_id == current_user.id)\
+        .filter(Account.profile_id == current_profile.id)\
         .filter(Transaction.transaction_type == 'Expense')\
         .filter(func.extract('month', Transaction.date) == month)\
         .filter(func.extract('year', Transaction.date) == year)\
@@ -102,20 +106,18 @@ def index():
                            expense_data=expense_data,
                            category_labels=category_labels,
                            category_values=category_values,
-                           base_currency=current_user.base_currency or Currency.query.filter_by(code='BDT').first())
+                           base_currency=Currency.query.filter_by(code='BDT').first())
 
 @main.route('/export/excel')
-@login_required
 def export_excel():
-    output = export_transactions_to_excel(current_user.id)
+    output = export_transactions_to_excel()
     return send_file(output, 
                      download_name=f"transactions_{datetime.now().strftime('%Y%m%d')}.xlsx",
                      as_attachment=True)
 
 @main.route('/export/csv')
-@login_required
 def export_csv():
-    output = export_transactions_to_csv(current_user.id)
+    output = export_transactions_to_csv()
     return Response(output,
                     mimetype="text/csv",
                     headers={"Content-disposition": f"attachment; filename=transactions_{datetime.now().strftime('%Y%m%d')}.csv"})

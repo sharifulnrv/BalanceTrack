@@ -1,20 +1,27 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
-from flask_login import login_required, current_user
 from app import db
-from app.models import Account, Currency
+from app.models import Account, Currency, Profile
 from seed_data import seed_currencies
 
 accounts = Blueprint('accounts', __name__)
 
+def get_current_profile():
+    return Profile.query.filter_by(is_active=True).first()
+
 @accounts.route('/')
-@login_required
 def index():
-    user_accounts = Account.query.filter_by(user_id=current_user.id).all()
+    profile = get_current_profile()
+    if not profile:
+        return redirect(url_for('profiles.index'))
+    user_accounts = Account.query.filter_by(profile_id=profile.id).all()
     return render_template('accounts/index.html', accounts=user_accounts)
 
 @accounts.route('/add', methods=['GET', 'POST'])
-@login_required
 def add():
+    profile = get_current_profile()
+    if not profile:
+        return redirect(url_for('profiles.index'))
+
     if request.method == 'POST':
         name = request.form.get('name')
         account_type = request.form.get('account_type')
@@ -27,7 +34,7 @@ def add():
             currency_id = bdt.id if bdt else None
         
         new_account = Account(
-            user_id=current_user.id,
+            profile_id=profile.id,
             name=name,
             account_type=account_type,
             balance=balance,
@@ -44,12 +51,9 @@ def add():
     return render_template('accounts/add.html', currencies=currencies)
 
 @accounts.route('/edit/<int:id>', methods=['GET', 'POST'])
-@login_required
 def edit(id):
-    account = Account.query.get_or_404(id)
-    if account.user_id != current_user.id:
-        flash('Unauthorized access.', 'danger')
-        return redirect(url_for('accounts.index'))
+    profile = get_current_profile()
+    account = Account.query.filter_by(id=id, profile_id=profile.id).first_or_404()
     
     if request.method == 'POST':
         account.name = request.form.get('name')
@@ -67,12 +71,9 @@ def edit(id):
     return render_template('accounts/edit.html', account=account, currencies=currencies)
 
 @accounts.route('/delete/<int:id>', methods=['POST'])
-@login_required
 def delete(id):
-    account = Account.query.get_or_404(id)
-    if account.user_id != current_user.id:
-        flash('Unauthorized access.', 'danger')
-        return redirect(url_for('accounts.index'))
+    profile = get_current_profile()
+    account = Account.query.filter_by(id=id, profile_id=profile.id).first_or_404()
     
     db.session.delete(account)
     db.session.commit()

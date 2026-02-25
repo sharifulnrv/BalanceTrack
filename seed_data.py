@@ -1,7 +1,10 @@
 from app import create_app, db
 from app.models import Category, Currency
 
-def seed_categories(user_id):
+def seed_categories():
+    if Category.query.first():
+        return
+        
     categories = [
         # Expenses
         {'name': 'Food & Drinks', 'icon': 'ph-hamburger', 'is_income': False},
@@ -19,7 +22,7 @@ def seed_categories(user_id):
     ]
     
     for cat_data in categories:
-        cat = Category(user_id=user_id, **cat_data)
+        cat = Category(**cat_data)
         db.session.add(cat)
     db.session.commit()
 

@@ -1,19 +1,27 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
-from flask_login import login_required, current_user
 from app import db
-from app.models import Category
+from app.models import Category, Profile
 
 categories = Blueprint('categories', __name__)
 
+def get_current_profile():
+    return Profile.query.filter_by(is_active=True).first()
+
 @categories.route('/')
-@login_required
 def index():
-    user_categories = Category.query.filter_by(user_id=current_user.id).all()
+    profile = get_current_profile()
+    if not profile:
+        return redirect(url_for('profiles.index'))
+    # Show categories from this profile or global ones (profile_id is NULL)
+    user_categories = Category.query.filter((Category.profile_id == profile.id) | (Category.profile_id == None)).all()
     return render_template('categories/index.html', categories=user_categories)
 
 @categories.route('/add', methods=['GET', 'POST'])
-@login_required
 def add():
+    profile = get_current_profile()
+    if not profile:
+        return redirect(url_for('profiles.index'))
+
     if request.method == 'POST':
         name = request.form.get('name')
         icon = request.form.get('icon', 'ph-tag')
@@ -21,7 +29,7 @@ def add():
         is_income = request.form.get('type') == 'Income'
         
         new_category = Category(
-            user_id=current_user.id,
+            profile_id=profile.id,
             name=name,
             icon=icon,
             color=color,
@@ -41,12 +49,9 @@ def add():
     return render_template('categories/add.html')
 
 @categories.route('/edit/<int:id>', methods=['GET', 'POST'])
-@login_required
 def edit(id):
-    category = Category.query.get_or_404(id)
-    if category.user_id != current_user.id:
-        flash('Unauthorized access.', 'danger')
-        return redirect(url_for('categories.index'))
+    profile = get_current_profile()
+    category = Category.query.filter((Category.id == id) & ((Category.profile_id == profile.id) | (Category.profile_id == None))).first_or_404()
     
     if request.method == 'POST':
         category.name = request.form.get('name')
@@ -61,12 +66,9 @@ def edit(id):
     return render_template('categories/edit.html', category=category)
 
 @categories.route('/delete/<int:id>', methods=['POST'])
-@login_required
 def delete(id):
-    category = Category.query.get_or_404(id)
-    if category.user_id != current_user.id:
-        flash('Unauthorized access.', 'danger')
-        return redirect(url_for('categories.index'))
+    profile = get_current_profile()
+    category = Category.query.filter_by(id=id, profile_id=profile.id).first_or_404()
     
     db.session.delete(category)
     db.session.commit()

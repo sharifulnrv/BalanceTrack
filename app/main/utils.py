@@ -2,8 +2,8 @@ import pandas as pd
 from io import BytesIO
 from app.models import Transaction, Account
 
-def export_transactions_to_excel(user_id):
-    transactions = Transaction.query.join(Account, Transaction.account_id == Account.id).filter(Account.user_id == user_id).all()
+def export_transactions_to_excel():
+    transactions = Transaction.query.all()
     
     data = []
     for tx in transactions:
@@ -24,8 +24,8 @@ def export_transactions_to_excel(user_id):
     output.seek(0)
     return output
 
-def export_transactions_to_csv(user_id):
-    transactions = Transaction.query.join(Account, Transaction.account_id == Account.id).filter(Account.user_id == user_id).all()
+def export_transactions_to_csv():
+    transactions = Transaction.query.all()
     
     data = []
     for tx in transactions:

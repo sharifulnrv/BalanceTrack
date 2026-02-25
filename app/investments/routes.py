@@ -1,26 +1,33 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
-from flask_login import login_required, current_user
 from app import db
-from app.models import Investment
+from app.models import Investment, Profile
 
 investments = Blueprint('investments', __name__)
 
+def get_current_profile():
+    return Profile.query.filter_by(is_active=True).first()
+
 @investments.route('/')
-@login_required
 def index():
-    user_investments = Investment.query.filter_by(user_id=current_user.id).all()
+    profile = get_current_profile()
+    if not profile:
+        return redirect(url_for('profiles.index'))
+    user_investments = Investment.query.filter_by(profile_id=profile.id).all()
     return render_template('investments/index.html', investments=user_investments)
 
 @investments.route('/add', methods=['GET', 'POST'])
-@login_required
 def add():
+    profile = get_current_profile()
+    if not profile:
+        return redirect(url_for('profiles.index'))
+
     if request.method == 'POST':
         name = request.form.get('name')
         asset_type = request.form.get('type') # Stock, Crypto, FD
         principal = float(request.form.get('principal'))
         
         investment = Investment(
-            user=current_user,
+            profile_id=profile.id,
             name=name,
             asset_type=asset_type,
             principal_amount=principal,
@@ -34,12 +41,9 @@ def add():
     return render_template('investments/add.html')
 
 @investments.route('/edit/<int:id>', methods=['GET', 'POST'])
-@login_required
 def edit(id):
-    investment = Investment.query.get_or_404(id)
-    if investment.user_id != current_user.id:
-        flash('Unauthorized access.', 'danger')
-        return redirect(url_for('investments.index'))
+    profile = get_current_profile()
+    investment = Investment.query.filter_by(id=id, profile_id=profile.id).first_or_404()
     
     if request.method == 'POST':
         investment.name = request.form.get('name')
@@ -54,12 +58,9 @@ def edit(id):
     return render_template('investments/edit.html', investment=investment)
 
 @investments.route('/delete/<int:id>', methods=['POST'])
-@login_required
 def delete(id):
-    investment = Investment.query.get_or_404(id)
-    if investment.user_id != current_user.id:
-        flash('Unauthorized access.', 'danger')
-        return redirect(url_for('investments.index'))
+    profile = get_current_profile()
+    investment = Investment.query.filter_by(id=id, profile_id=profile.id).first_or_404()
     
     db.session.delete(investment)
     db.session.commit()
